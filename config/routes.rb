@@ -724,7 +724,7 @@ SEEK::Application.routes.draw do
   end
 
   ### SAMPLE TYPES ###
-
+  #
   resources :sample_types do
     collection do
       post :create_from_template
@@ -733,6 +733,7 @@ SEEK::Application.routes.draw do
     end
     member do
       get :template_details
+      get :batch_upload
     end
     resources :samples
     resources :content_blobs do
