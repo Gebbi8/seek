@@ -9,7 +9,7 @@ class PublicationsController < ApplicationController
 
   before_action :find_assets, only: [:index]
   before_action :find_and_authorize_requested_item, only: %i[show edit update destroy]
-  before_action :suggest_authors, only: :edit
+  before_action :suggest_authors, only: :mange
 
   include Seek::BreadCrumbs
 
@@ -42,7 +42,7 @@ class PublicationsController < ApplicationController
       format.html # show.html.erb
       format.xml
       format.rdf { render template: 'rdf/show' }
-      format.json {render json: @publication}
+      format.json {render json: @publication, include: [params[:include]]}
       format.any( *Publication::EXPORT_TYPES.keys ) do
         begin
           send_data @publication.export(request.format.to_sym), type: request.format.to_sym, filename: "#{@publication.title}.#{request.format.to_sym}"
@@ -69,6 +69,11 @@ class PublicationsController < ApplicationController
 
   # GET /publications/1/edit
   def edit; end
+
+  # GET /publications/1/manage
+  def manage
+    @publication = Publication.find(params[:id])
+  end
 
   # POST /publications
   # POST /publications.xml
@@ -107,7 +112,7 @@ class PublicationsController < ApplicationController
         flash[:notice] = 'Publication was successfully updated.'
         format.html { redirect_to(@publication) }
         format.xml  { head :ok }
-        format.json { render json: @publication, status: :ok}
+        format.json { render json: @publication, status: :ok, include: [params[:include]]}
       end
     else
       respond_to do |format|
@@ -147,6 +152,30 @@ class PublicationsController < ApplicationController
       end
     else
       @authors = result.authors
+      respond_to do |format|
+        format.js
+      end
+    end
+  end
+
+  def update_metadata
+
+    @publication = Publication.new(publication_params)
+    publication_type_id= params[:publication][:publication_type_id]
+    doi= params[:publication][:doi]
+    id= params[:publication][:id]
+    if publication_type_id.blank?
+      @error = "Please choose a publication type."
+    else
+      result = get_data(@publication, nil, doi)
+    end
+    @error =  @publication.errors.full_messages.join('<br>') if @publication.errors.any?
+    if !@error.nil?
+      @error_text = @error
+      respond_to do |format|
+        format.js { render status: 500 }
+      end
+    else
       respond_to do |format|
         format.js
       end
@@ -275,7 +304,7 @@ class PublicationsController < ApplicationController
 
 
     respond_to do |format|
-      format.html {redirect_to(edit_publication_url(@publication))}
+      format.html {redirect_to(manage_publication_url(@publication))}
       format.xml {head :ok}
     end
   end
@@ -333,9 +362,9 @@ class PublicationsController < ApplicationController
       else
         respond_to do |format|
           flash[:notice] = 'Publication was successfully created.'
-          format.html { redirect_to(edit_publication_url(@publication)) }
+          format.html { redirect_to(manage_publication_url(@publication)) }
           format.xml  { render xml: @publication, status: :created, location: @publication }
-          format.json  { render json: @publication, status: :created, location: @publication }
+          format.json  { render json: @publication, status: :created, location: @publication, include: [params[:include]] }
         end
       end
     else # Publication save not successful
@@ -370,9 +399,9 @@ class PublicationsController < ApplicationController
       else
         respond_to do |format|
           flash[:notice] = 'Publication was successfully created.'
-          format.html { redirect_to(edit_publication_url(@publication)) }
+          format.html { redirect_to(manage_publication_url(@publication)) }
           format.xml  { render xml: @publication, status: :created, location: @publication }
-          format.json { render json: @publication, status: :created, location: @publication }
+          format.json { render json: @publication, status: :created, location: @publication, include: [params[:include]] }
         end
       end
     else # Publication save not successful
@@ -418,7 +447,7 @@ class PublicationsController < ApplicationController
         @subaction = 'Create'
         respond_to do |format|
           format.html { render action: 'new' }
-          format.json { render json: @publication, status: :ok }
+          format.json { render json: @publication, status: :ok, include: [params[:include]] }
         end
     end
   end

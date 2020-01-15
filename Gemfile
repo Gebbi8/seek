@@ -40,7 +40,7 @@ gem 'jbuilder-json_api'
 gem 'active_model_serializers', '~> 0.10.2'
 gem 'json-schema'
 gem 'json-diff'
-gem 'rubyzip', '~> 1.2.2'
+gem 'rubyzip'
 
 gem 'equivalent-xml'
 gem 'breadcrumbs_on_rails'
@@ -87,7 +87,7 @@ gem 'bootstrap-sass', '>=3.4.1'
 gem 'sass-rails', '~> 5.0'
 gem 'sprockets-rails'
 
-gem 'ro-bundle'
+gem 'ro-bundle', '~> 0.2.4'
 gem 'handlebars_assets'
 gem 'zenodo-client', git: 'https://github.com/seek4science/zenodo-client.git'
 
@@ -103,6 +103,8 @@ gem 'bibtex-ruby', '~> 4.4.2'
 
 gem 'omniauth', '~> 1.3.1'
 gem 'omniauth-ldap', '~> 1.0.5'
+gem 'omniauth_openid_connect'
+gem 'omniauth-rails_csrf_protection', '~> 0.1'
 
 gem 'ransack'
 
