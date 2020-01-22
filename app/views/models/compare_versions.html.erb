@@ -27,6 +27,25 @@
             <div>
               <%= submit_tag "Compare", data: { disable_with: 'Comparing' } %>
             </div>
+        <% end %>
+
+        <%= form_tag merge_versions_model_path(@model), :method => :post do %>
+          <%= hidden_field_tag :other_version, @other_version.version %>
+          <%= hidden_field_tag :version, @display_model.version %>
+          <div id="version_file_selection" class="curved with_smaller_shadow">
+            <h2>Select different files to merge:</h2>
+
+            <div>
+              <b>Version:<%= @display_model.version -%></b>
+              <%= select_tag :file_id, options_for_select(@display_model.sbml_content_blobs.collect { |b| [b.original_filename, b.id] }, @blob1.id) %>
+            </div>
+            <div>
+              <b>Version:<%= @other_version.version -%></b>
+              <%= select_tag :other_file_id, options_for_select(@other_version.sbml_content_blobs.collect { |b| [b.original_filename, b.id] }, @blob2.id) %>
+            </div>
+            <div>
+              <%= submit_tag "Merge", data: { disable_with: 'Merging' } %>
+            </div>
 
           </div>
       <% end %>

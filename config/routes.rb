@@ -476,6 +476,8 @@ SEEK::Application.routes.draw do
     member do
       get :compare_versions
       post :compare_versions
+      get :merge_versions
+      post :merge_versions
       post :check_related_items
       get :visualise
       post :check_gatekeeper_required

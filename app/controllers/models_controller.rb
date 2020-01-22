@@ -1,5 +1,6 @@
 require 'libxml'
 require 'bives'
+require 'net/http/post/multipart'
 
 class ModelsController < ApplicationController
   include Seek::IndexPager
@@ -8,8 +9,8 @@ class ModelsController < ApplicationController
   before_action :models_enabled?
   before_action :find_assets, :only => [:index]
   before_action :find_and_authorize_requested_item, :except => [:build, :index, :new, :create, :request_resource, :preview, :test_asset_url, :update_annotations_ajax]
-  before_action :find_display_asset, :only => [:show, :download, :execute, :visualise, :export_as_xgmml, :compare_versions]
-  before_action :find_other_version, :only => [:compare_versions]
+  before_action :find_display_asset, :only => [:show, :download, :execute, :visualise, :export_as_xgmml, :compare_versions, :merge_versions]
+  before_action :find_other_version, :only => [:compare_versions, :merge_versions]
 
   include Seek::Jws::Simulator
   include Seek::Publishing::PublishingCommon
@@ -42,6 +43,42 @@ class ModelsController < ApplicationController
     else
       flash.now[:error]="One of the version files could not be found, or you are not authorized to examine it"
     end
+  end
+
+  def merge_versions
+    select_blobs_for_comparison
+    if @blob1 && @blob2
+      begin
+
+        url = URI.parse('http://localhost:80/GitRepos/MOST/bives/simpleMerge.php')
+        File.open(@blob1.filepath) do |f1|
+          File.open(@blob2.filepath) do |f2|
+            req = Net::HTTP::Post::Multipart.new url.path,
+              "file1" => UploadIO.new(f1, "file/xml"), 
+              "file2" => UploadIO.new(f2, "file/xml")
+            res = Net::HTTP.start(url.host, url.port) do |http|
+              http.request(req)
+
+              puts "--------------------------------------"
+              puts res
+              puts "......................................"
+            end
+          end
+        end
+
+      
+      rescue StandardError => e
+        raise e unless Rails.env.production?
+        flash.now[:error]="there was an error trying to merge the two versions - #{e.message}"
+      end
+    else
+      flash.now[:error]="One of the version files could not be found, or you are not authorized to examine it"
+    end
+
+
+
+
+
   end
 
   def select_blobs_for_comparison
