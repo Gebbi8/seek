@@ -1,5 +1,7 @@
 require 'libxml'
 require 'bives'
+
+require 'net/http'
 require 'net/http/post/multipart'
 
 class ModelsController < ApplicationController
@@ -49,24 +51,27 @@ class ModelsController < ApplicationController
     select_blobs_for_comparison
     if @blob1 && @blob2
       begin
-
-        url = URI.parse('http://localhost:80/GitRepos/MOST/bives/simpleMerge.php')
-        File.open(@blob1.filepath) do |f1|
-          File.open(@blob2.filepath) do |f2|
+        url = URI.parse('http://139.30.6.31:80/GitRepos/MOST/bives/simpleMerge.php')
+          puts url.port
+          http = Net::HTTP.new(url.host, url.port)
+          http.set_debug_output($stdout)
+          puts "check"
             req = Net::HTTP::Post::Multipart.new url.path,
-              "file1" => UploadIO.new(f1, "file/xml"), 
-              "file2" => UploadIO.new(f2, "file/xml")
-            res = Net::HTTP.start(url.host, url.port) do |http|
-              http.request(req)
-
-              puts "--------------------------------------"
-              puts res
-              puts "......................................"
-            end
-          end
-        end
-
-      
+              "file1" => UploadIO.new(@blob1.filepath, "file/xml"), 
+              "file2" => UploadIO.new(@blob2.filepath, "file/xml")  
+              res = Net::HTTP.start(url.host, url.port) do |http|
+                http.request(req)
+              end
+              puts "----"
+              puts res.body
+              puts "->---<-"
+              puts res.code
+              puts "---"
+              if res.body
+                redirect_to 'http://localhost:8081/#/?jobID=' + res.body + "&goBack=" +  "http://139.30.6.31:8080/models/new" # call bives-merger website with session id & go back adress to version upload
+              else
+                flash.now[:error] = "The BiVeS service did not answer your request."
+              end
       rescue StandardError => e
         raise e unless Rails.env.production?
         flash.now[:error]="there was an error trying to merge the two versions - #{e.message}"
@@ -74,11 +79,10 @@ class ModelsController < ApplicationController
     else
       flash.now[:error]="One of the version files could not be found, or you are not authorized to examine it"
     end
+  end
 
-
-
-
-
+  def get_merged_versions
+    
   end
 
   def select_blobs_for_comparison
