@@ -52,10 +52,8 @@ class ModelsController < ApplicationController
     if @blob1 && @blob2
       begin
         url = URI.parse('http://139.30.6.31:80/GitRepos/MOST/bives/simpleMerge.php')
-          puts url.port
           http = Net::HTTP.new(url.host, url.port)
           http.set_debug_output($stdout)
-          puts "check"
             req = Net::HTTP::Post::Multipart.new url.path,
               "file1" => UploadIO.new(@blob1.filepath, "file/xml"), 
               "file2" => UploadIO.new(@blob2.filepath, "file/xml")  
@@ -68,7 +66,7 @@ class ModelsController < ApplicationController
               puts res.code
               puts "---"
               if res.body
-                redirect_to 'http://localhost:8081/#/?jobID=' + res.body + "&goBack=" +  "http://139.30.6.31:8080/models/new" # call bives-merger website with session id & go back adress to version upload
+                redirect_to 'https://merge-proto.bio.informatik.uni-rostock.de/#/?jobID=' + res.body + "&goBack=" +  request.host # call bives-merger website with session id & go back adress to version upload
               else
                 flash.now[:error] = "The BiVeS service did not answer your request."
               end
