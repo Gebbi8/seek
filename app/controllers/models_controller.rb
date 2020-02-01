@@ -66,7 +66,7 @@ class ModelsController < ApplicationController
               puts res.code
               puts "---"
               if res.body
-                redirect_to 'https://merge-proto.bio.informatik.uni-rostock.de/#/?jobID=' + res.body + "&goBack=" +  request.host # call bives-merger website with session id & go back adress to version upload
+                redirect_to 'https://merge-proto.bio.informatik.uni-rostock.de/#/?jobID=' + res.body + "&goBack=" +  request.original_url # call bives-merger website with session id & go back adress to version upload
               else
                 flash.now[:error] = "The BiVeS service did not answer your request."
               end
