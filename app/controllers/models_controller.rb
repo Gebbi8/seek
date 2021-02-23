@@ -51,8 +51,8 @@ class ModelsController < ApplicationController
     select_blobs_for_comparison
     if @blob1 && @blob2
       begin
-        url = URI.parse('https://139.30.6.31:80/GitRepos/MOST/bives/simpleMerge.php')
-        #url = URI.parse('https://merge-proto.bio.informatik.uni-rostock.de/bives/simpleMerge.php')
+        #url = URI.parse('https://139.30.6.31:80/GitRepos/MOST/bives/simpleMerge.php')
+        url = URI.parse('https://merge-proto.bio.informatik.uni-rostock.de/bives/simpleMerge.php')
           http = Net::HTTP.new(url.host, url.port)
           http.set_debug_output($stdout)
             req = Net::HTTP::Post::Multipart.new url.path,
