@@ -53,12 +53,12 @@ class ModelsController < ApplicationController
       begin
         #url = URI.parse('https://139.30.6.31:80/GitRepos/MOST/bives/simpleMerge.php')
         url = URI.parse('https://merge-proto.bio.informatik.uni-rostock.de/bives/simpleMerge.php')
-          http = Net::HTTP.new(url.host, url.port, :use_ssl => true)
+          http = Net::HTTP.new(url.host, url.port)
           http.set_debug_output($stdout)
             req = Net::HTTP::Post::Multipart.new url.path,
               "file1" => UploadIO.new(@blob1.filepath, "file/xml"), 
               "file2" => UploadIO.new(@blob2.filepath, "file/xml")  
-              res = Net::HTTP.start(url.host, url.port) do |http|
+              res = Net::HTTP.start(url.host, url.port, :use_ssl => true) do |http|
                 http.request(req)
               end
               puts "----"
