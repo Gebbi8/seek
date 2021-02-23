@@ -58,7 +58,7 @@ class ModelsController < ApplicationController
             req = Net::HTTP::Post::Multipart.new url.path,
               "file1" => UploadIO.new(@blob1.filepath, "file/xml"), 
               "file2" => UploadIO.new(@blob2.filepath, "file/xml")  
-              res = Net::HTTP.start(url.host, url.port) do |http|
+              res = Net::HTTP.start(url.host, url.port) do |https|
                 http.request(req)
               end
               puts "----"
