@@ -1,7 +1,7 @@
 require 'digest/sha1'
 
 class User < ApplicationRecord
-  MIN_PASSWORD_LENGTH=10
+  MIN_PASSWORD_LENGTH = 10
 
   acts_as_annotation_source
 
@@ -10,8 +10,20 @@ class User < ApplicationRecord
   belongs_to :person
 
   has_many :identities, dependent: :destroy
-
   has_many :oauth_sessions, dependent: :destroy
+  has_many :api_tokens, dependent: :destroy
+  # Doorkeeper-related
+  has_many :access_grants,
+           class_name: "Doorkeeper::AccessGrant",
+           foreign_key: :resource_owner_id,
+           dependent: :destroy
+  has_many :access_tokens,
+           class_name: "Doorkeeper::AccessToken",
+           foreign_key: :resource_owner_id,
+           dependent: :destroy
+  has_many :oauth_applications,
+           class_name: "Doorkeeper::Application",
+           as: :owner
 
   # restful_authentication plugin generated code ...
   # Virtual attribute for the unencrypted password
@@ -42,7 +54,7 @@ class User < ApplicationRecord
 
   has_many :favourite_groups, dependent: :destroy
 
-  scope :not_activated, -> { where('activation_code IS NOT NULL') }
+  scope :not_activated, -> { where.not(activation_code:nil).where.not(person:nil) }
 
   acts_as_uniquely_identifiable
 
@@ -109,11 +121,14 @@ class User < ApplicationRecord
   end
 
   # Activates the user in the database.
-  def activate
+  def activate    
     @activated = true
     self.activated_at = Time.now.utc
     self.activation_code = nil
     save(validate: false)
+
+    #clear message logs if associated with a person (might not be when automatically activated when activation is required)
+    MessageLog.activation_email_logs(person).destroy_all unless person.nil?
   end
 
   def assets
@@ -295,6 +310,14 @@ class User < ApplicationRecord
       user.password = random_password
       user.password_confirmation = user.password
     end
+  end
+
+  def self.from_api_token(token)
+    joins(:api_tokens).where(api_tokens: { encrypted_token: ApiToken.encrypt_token(token) }).first
+  end
+
+  def uses_omniauth?
+    identities.any?
   end
 
   protected

@@ -18,6 +18,20 @@ class PublicationTest < ActiveSupport::TestCase
 
   end
 
+  test 'publication type validation' do
+
+    # new publication must have a publication type
+    project = Factory(:project)
+    p1 = Publication.new(title: 'test1', projects: [project], doi: '10.5072/abc',publication_type_id:nil)
+    assert !p1.valid?
+
+    # allow old publications without publication type
+    p2 = Factory(:publication)
+    p2.publication_type_id = nil
+    disable_authorization_checks { p2.save! }
+    assert p2.valid?
+  end
+
   test 'create publication from hash' do
     publication_hash = {
         title: 'SEEK publication',
@@ -208,7 +222,7 @@ class PublicationTest < ActiveSupport::TestCase
     assert_equal :book_chapter, result.publication_type
     assert_equal 'Prediction with Confidence Based on a Random Forest Classifier', result.title
     assert_equal 2, result.authors.size
-    assert_equal 'Artificial Intelligence Applications and Innovations 339:37-44,Springer Berlin Heidelberg.2010', result.citation
+    assert_equal 'Artificial Intelligence Applications and Innovations 339:37-44,Springer Berlin Heidelberg', result.citation
     last_names = %w(Devetyarov Nouretdinov)
     result.authors.each do |auth|
       assert last_names.include? auth.last_name

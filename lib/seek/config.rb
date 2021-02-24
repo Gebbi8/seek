@@ -236,7 +236,7 @@ module Seek
       hash[controller.to_s]&.to_sym
     end
 
-    def set_sorting_for(controller, value)      
+    def set_sorting_for(controller, value)
       # Store value as a string, unless nil, or not a valid sorting option for that controller.
       if value.blank? || !Seek::ListSorter.options(controller.to_s.classify).include?(value.to_sym)
         value = nil
@@ -295,6 +295,18 @@ module Seek
       end
     end
 
+    def studies_enabled
+      isa_enabled
+    end
+
+    def investigations_enabled
+      isa_enabled
+    end
+
+    def assays_enabled
+      isa_enabled
+    end
+
     def omniauth_elixir_aai_config
       callback_path = '/identities/auth/elixir_aai/callback'
 
@@ -323,10 +335,24 @@ module Seek
       }
     end
 
+    def omniauth_ldap_settings(field)
+      omniauth_ldap_config.with_indifferent_access[field.to_s]
+    end
+
+    def set_omniauth_ldap_settings(field, value)
+      merge! :omniauth_ldap_config, field => (value.blank? ? nil : value)
+      value
+    end
+
+    def omniauth_github_config
+      [omniauth_github_client_id, omniauth_github_secret, { scope: 'user:email' }]
+    end
+
     def omniauth_providers
       providers = {}
       providers[:ldap] = omniauth_ldap_config.merge(name: :ldap, form: SessionsController.action(:new)) if omniauth_ldap_enabled
       providers[:openid_connect] = omniauth_elixir_aai_config if omniauth_elixir_aai_enabled
+      providers[:github] = omniauth_github_config if omniauth_github_enabled
       providers
     end
   end

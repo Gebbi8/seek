@@ -4,6 +4,7 @@ class InvestigationsController < ApplicationController
   include Seek::DestroyHandling
   include Seek::AssetsCommon
 
+  before_action :investigations_enabled?
   before_action :find_assets, :only=>[:index]
   before_action :find_and_authorize_requested_item,:only=>[:edit, :manage, :update, :manage_update, :destroy, :show,:new_object_based_on_existing_one]
 
@@ -15,12 +16,12 @@ class InvestigationsController < ApplicationController
 
   include Seek::AnnotationCommon
 
-  include Seek::BreadCrumbs
-
   include Seek::IsaGraphExtensions
 
   require "isatab_converter"
   include IsaTabConverter
+
+  api_actions :index, :show, :create, :update, :destroy
 
   def new_object_based_on_existing_one
     @existing_investigation =  Investigation.find(params[:id])
@@ -106,11 +107,15 @@ class InvestigationsController < ApplicationController
     end
   end
 
+
+
   private
 
   def investigation_params
     params.require(:investigation).permit(:title, :description, { project_ids: [] }, :other_creators,
-                                          { creator_ids: [] },{ scales: [] }, { publication_ids: [] })
+                                          { creator_ids: [] },{ scales: [] }, { publication_ids: [] },
+                                          { discussion_links_attributes:[:id, :url, :label, :_destroy] },
+                                          { custom_metadata_attributes: determine_custom_metadata_keys })
   end
 
 end

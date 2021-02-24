@@ -42,7 +42,7 @@ class DataFile < ApplicationRecord
       joins: [:assays]
   )
 
-  explicit_versioning(version_column: 'version') do
+  explicit_versioning(version_column: 'version', sync_ignore_columns: ['doi']) do
     include Seek::Data::SpreadsheetExplorerRepresentation
     acts_as_doi_mintable(proxy: :parent, type: 'Dataset', general_type: 'Dataset')
     acts_as_versioned_resource
@@ -75,6 +75,14 @@ class DataFile < ApplicationRecord
     end
 
     def event_ids=(_events_ids); end
+  end
+
+  # Returns the columns to be shown on the table view for the resource
+  def columns_default
+    super + ['version']
+  end
+  def columns_allowed
+    super + ['last_used_at','version','other_creators','doi','license','simulation_data','deleted_contributor']
   end
 
   def included_to_be_copied?(symbol)
@@ -230,4 +238,6 @@ class DataFile < ApplicationRecord
       return assay, Set.new
     end
   end
+
+  has_task :sample_extraction
 end

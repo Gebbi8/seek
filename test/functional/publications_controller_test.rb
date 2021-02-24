@@ -63,6 +63,19 @@ class PublicationsControllerTest < ActionController::TestCase
     assert p.assays.include? assay
   end
 
+  test 'should create doi publication and suggest the associated person' do
+    person = people(:johan_person)
+    mock_crossref(email: 'sowen@cs.man.ac.uk', doi: '10.1371/journal.pone.0004803', content_file: 'cross_ref3.xml')
+    assert_difference('Publication.count') do
+      post :create, params: { publication: { doi: '10.1371/journal.pone.0004803', project_ids: [projects(:sysmo_project).id],publication_type_id: Factory(:journal).id } }
+    end
+    get :manage, params: { id: assigns(:publication) }
+    assert_response :success
+    p = assigns(:publication)
+    assert_equal p.publication_authors[0].suggested_person.name, person.name
+  end
+
+
   test 'should create doi publication' do
     mock_crossref(email: 'sowen@cs.man.ac.uk', doi: '10.1371/journal.pone.0004803', content_file: 'cross_ref3.xml')
     assert_difference('Publication.count') do
@@ -319,13 +332,19 @@ class PublicationsControllerTest < ActionController::TestCase
   test 'should show old unspecified publication type' do
     get :index
     assert_response :success
-    assert_select 'span.none_text', { text:'Not specified', :count=> 9 }
+    assert_select '.list_item_attribute' do
+      assert_select 'b', { text: 'Publication Type' }
+      assert_select 'span.none_text', { text: 'Not specified' }
+    end
   end
 
   test 'should show the publication with unspecified publication type as Not specified' do
     get :show, params: { id: publications(:no_publication_type) }
     assert_response :success
-    assert_select 'span.none_text', { text:'Not specified', :count=>3 }
+    assert_select 'p' do
+      assert_select 'strong', { text: 'Publication type:' }
+      assert_select 'span.none_text', { text: 'Not specified' }
+    end
   end
 
   test 'should only show the year for 1st Jan in list view' do
@@ -513,10 +532,6 @@ class PublicationsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test 'should get manage' do
-    get :manage, params: { id: publications(:one) }
-    assert_response :success
-  end
 
   test 'associates assay' do
     login_as(:model_owner) # can edit assay
@@ -990,7 +1005,7 @@ class PublicationsControllerTest < ActionController::TestCase
     get :query_authors_typeahead, params: { format: :json, full_name: query }
     assert_response :success
     authors = JSON.parse(@response.body)
-    assert_equal 0, authors['data'].length
+    assert_equal 0, authors.length
   end
 
   test 'query authors for initialization' do
@@ -1123,17 +1138,6 @@ class PublicationsControllerTest < ActionController::TestCase
     assert response.body.include?('FAIRDOMHub: a repository')
   end
 
-
-  test 'should handle blank publication type when refetching doi metadata' do
-    VCR.use_cassette('publications/refetch_by_doi_non_publication_type_error.yml') do
-      with_config_value :crossref_api_email, 'sowen@cs.man.ac.uk' do
-        post :update_metadata, xhr: true, params: { doi: '10.1136/gutjnl-2018-317872', publication: { project_ids: [User.current_user.person.projects.first.id], publication_type_id: nil } }
-      end
-    end
-    assert_response :internal_server_error
-    assert_match /An error has occurred.*Please choose a publication type./,response.body
-  end
-
   test 'should handle blank pubmed' do
     VCR.use_cassette('publications/fairdom_by_doi') do
       with_config_value :pubmed_api_email, 'fred@email.com' do
@@ -1183,6 +1187,40 @@ class PublicationsControllerTest < ActionController::TestCase
 
     assert_response :success
     assert response.body.include?('FAIRDOMHub: a repository')
+  end
+
+  test 'show original author name for associated person' do
+    #show the original name and formatting, but with link to associated person
+    registered_author = Factory(:registered_publication_author)
+    person = registered_author.person
+    original_full_name = registered_author.full_name
+    refute_nil person
+
+    publication = Factory(:publication, publication_authors:[registered_author, Factory(:publication_author)])
+    get :show, params: { id: publication }
+    assert_response :success
+
+    assert_select "p#authors" do
+      assert_select "a[href=?]", person_path(person), text: person.name, count:0
+      assert_select "a[href=?]", person_path(person), text: original_full_name
+    end
+  end
+
+  test 'list of investigations unique' do
+    #investigation should only be listed once even if in multiple matching projects
+    person = Factory(:person_in_multiple_projects)
+    assert person.projects.count > 1
+    investigation = Factory(:investigation,projects:person.projects,contributor:person)
+    publication = Factory(:publication, contributor:person)
+    login_as(person)
+
+    get :manage, params: { id: publication}
+    assert_response :success
+
+    assert_select 'select#possible_publication_investigation_ids' do
+      assert_select 'option[value=?]',investigation.id.to_s,count:1
+    end
+
   end
 
   private

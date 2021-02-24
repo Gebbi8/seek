@@ -4,7 +4,7 @@ class ProgrammesController < ApplicationController
   include ApiHelper
 
   before_action :programmes_enabled?
-  before_action :login_required, except: [:show, :index, :isa_children]
+  before_action :login_required, except: [:show, :index]
   before_action :find_and_authorize_requested_item, only: [:edit, :update, :destroy, :storage_report]
   before_action :find_requested_item, only: [:show, :admin,:activation_review,:accept_activation,:reject_activation,:reject_activation_confirmation]
   before_action :find_assets, only: [:index]
@@ -15,11 +15,11 @@ class ProgrammesController < ApplicationController
 
   skip_before_action :project_membership_required
 
-  include Seek::BreadCrumbs
-
   include Seek::IsaGraphExtensions
 
   respond_to :html, :json
+
+  api_actions :index, :show, :create, :update, :destroy
 
   def create
     @programme = Programme.new(programme_params)
@@ -34,7 +34,7 @@ class ProgrammesController < ApplicationController
           current_person.is_programme_administrator = true, @programme
           disable_authorization_checks { current_person.save! }
           if Seek::Config.email_enabled
-            Mailer.delay.programme_activation_required(@programme,current_person)
+            Mailer.programme_activation_required(@programme,current_person).deliver_later
           end
         end
         format.html {respond_with(@programme)}
@@ -94,21 +94,21 @@ class ProgrammesController < ApplicationController
     respond_with do |format|
       format.html
       format.json {render json: @programme, include: [params[:include]]}
-      format.rdf { render template: 'rdf/show' }	
+      format.rdf { render template: 'rdf/show' }
     end
   end
 
   def accept_activation
     @programme.activate
     flash[:notice]="The #{t('programme')} has been activated"
-    Mailer.delay.programme_activated(@programme) if Seek::Config.email_enabled
+    Mailer.programme_activated(@programme).deliver_later if Seek::Config.email_enabled
     redirect_to @programme
   end
 
   def reject_activation
     flash[:notice]="The #{t('programme')} has been rejected"
     @programme.update_attribute(:activation_rejection_reason,params[:programme][:activation_rejection_reason])
-    Mailer.delay.programme_rejected(@programme,@programme.activation_rejection_reason) if Seek::Config.email_enabled
+    Mailer.programme_rejected(@programme,@programme.activation_rejection_reason).deliver_later if Seek::Config.email_enabled
     redirect_to @programme
   end
 
@@ -118,6 +118,8 @@ class ProgrammesController < ApplicationController
                            locals: { programme: @programme } }
     end
   end
+
+
 
   private
 
@@ -133,12 +135,10 @@ class ProgrammesController < ApplicationController
   def inactive_view_allowed?
     return true if @programme.is_activated? || User.admin_logged_in?
     unless result=(User.logged_in_and_registered? && @programme.programme_administrators.include?(current_person))
-      error("This programme is not activated and cannot be viewed", "cannot view (not activated)", :forbidden)
+      error("This #{t('programme').downcase} is not activated and cannot be viewed", "cannot view (not activated)", :forbidden)
     end
     result
   end
-
-  private
 
   def fetch_assets
     if User.admin_logged_in?
@@ -155,7 +155,9 @@ class ProgrammesController < ApplicationController
 
     params.require(:programme).permit(:avatar_id, :description, :first_letter, :title, :uuid, :web_page,
                                       { project_ids: [] }, :funding_details, { administrator_ids: [] },
-                                      :activation_rejection_reason, :funding_codes)
+                                      :activation_rejection_reason, :funding_codes,
+                                      :open_for_projects,
+                                      discussion_links_attributes:[:id, :url, :label, :_destroy])
   end
 
 end
